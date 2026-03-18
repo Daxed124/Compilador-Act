@@ -1,0 +1,11 @@
+entero x = 5.
+entero y = 10.
+flota z = 3.14.
+tecto nombre = "Hola mundo".
+si x == y tons.
+    afuera("Son iguales").
+tonses.
+    afuera("No son iguales").
+.
+entero resultado = x suma y.
+afuera(resultado).
