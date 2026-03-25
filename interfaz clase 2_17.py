@@ -24,7 +24,7 @@ OPERADORES_DOBLES = {"==", "!="}
 SIMBOLOS = {"=", "(", ")", "{", "}", '"', ";", ",", "!"}
 OPERADORES = OPERADORES_PALABRA | OPERADORES_SIMBOLO | OPERADORES_DOBLES
 
-# Colores y estilos de la interfaz (paleta profesional)
+# Colores y estilos de la interfaz
 COLOR_FONDO = "#1a1a2e"
 COLOR_FONDO_PANEL = "#16213e"
 COLOR_FONDO_EDITOR = "#0f0f1a"
@@ -57,20 +57,17 @@ class CompiladorLogic:
 
     @staticmethod
     def compilar_y_ejecutar(ruta_archivo_fuente):
-        """
-        Simula el flujo de compilación:
-        1. Leer archivo
-        2. Análisis léxico
-        """
         with open(ruta_archivo_fuente, 'r', encoding='utf-8') as archivo:
             codigo_fuente = archivo.read()
 
         tokens = CompiladorLogic.analisis_lexico(codigo_fuente)
         return tokens
 
+    # ==========================
+    # LÉXICO
+    # ==========================
     @staticmethod
     def analisis_lexico(codigo):
-        """Analiza el código y retorna una lista de tokens."""
         tokens = []
         palabra = ""
         linea = 1
@@ -79,17 +76,17 @@ class CompiladorLogic:
         while i < len(codigo):
             c = codigo[i]
 
-            # FIX Error 1: Contar saltos de línea, no puntos
             if c == "\n":
                 linea += 1
 
             if c.isalnum() or c == "_":
                 palabra += c
+
             elif c == '"':
-                # FIX Error 5: Manejar cadenas de texto
                 if palabra:
                     CompiladorLogic._procesar_palabra(palabra, linea, tokens)
                     palabra = ""
+
                 cadena = ""
                 i += 1
                 while i < len(codigo) and codigo[i] != '"':
@@ -97,17 +94,17 @@ class CompiladorLogic:
                         linea += 1
                     cadena += codigo[i]
                     i += 1
+
                 tokens.append(("CADENA", f'"{cadena}"', linea))
-                # i se incrementa al final del while
+
             elif c == '.' and i + 1 < len(codigo) and codigo[i + 1].isdigit() and palabra.isdigit():
-                # FIX Error 6: Manejar números decimales
                 palabra += c
+
             else:
                 if palabra:
                     CompiladorLogic._procesar_palabra(palabra, linea, tokens)
                     palabra = ""
 
-                # FIX Error 3: Verificar operadores de dos caracteres
                 if i + 1 < len(codigo):
                     doble = c + codigo[i + 1]
                     if doble in OPERADORES_DOBLES:
@@ -119,11 +116,9 @@ class CompiladorLogic:
                     tokens.append(("OPERADOR", c, linea))
                 elif c in SIMBOLOS:
                     tokens.append(("SIMBOLO", c, linea))
-                # Ignoramos espacios en blanco, tabs, etc.
 
             i += 1
 
-        # Procesar la última palabra si existe
         if palabra:
             CompiladorLogic._procesar_palabra(palabra, linea, tokens)
 
@@ -131,21 +126,163 @@ class CompiladorLogic:
 
     @staticmethod
     def _procesar_palabra(palabra, linea, tokens):
-
         if palabra in PALABRAS_RESERVADAS:
             tokens.append(("PALABRA_RESERVADA", palabra, linea))
         elif palabra in TIPOS_DATO:
             tokens.append(("TIPO_DATO", palabra, linea))
         elif palabra in FUNCIONES_INTEGRADAS:
             tokens.append(("FUNCION_INTEGRADA", palabra, linea))
-        # FIX Error 2: Detectar operadores de palabra
         elif palabra in OPERADORES_PALABRA:
             tokens.append(("OPERADOR", palabra, linea))
         elif palabra.replace('.', '', 1).isdigit():
-            # Soporta enteros y decimales
             tokens.append(("NUMERO", palabra, linea))
         else:
             tokens.append(("IDENTIFICADOR", palabra, linea))
+
+    # ==========================
+    # SINTÁCTICO
+    # ==========================
+    @staticmethod
+    def analisis_sintactico(tokens):
+        errores = []
+        i = 0
+        pila = []
+
+        while i < len(tokens):
+            tipo, valor, linea = tokens[i]
+
+            # Paréntesis
+            if valor == "(":
+                pila.append(linea)
+            elif valor == ")":
+                if not pila:
+                    errores.append(f"')' sin abrir en línea {linea}")
+                else:
+                    pila.pop()
+
+            # Declaraciones
+            if tipo == "TIPO_DATO":
+                if i + 3 >= len(tokens):
+                    errores.append(f"Declaración incompleta en línea {linea}")
+                else:
+                    if tokens[i+1][0] != "IDENTIFICADOR":
+                        errores.append(f"Falta identificador en línea {linea}")
+
+                    if tokens[i+2][1] != "==":
+                        errores.append(f"Se esperaba '==' en línea {linea}")
+
+            i += 1
+
+        if pila:
+            errores.append("Paréntesis sin cerrar")
+
+        return errores
+
+    # ==========================
+    # SEMÁNTICO
+    # ==========================
+    @staticmethod
+    def analisis_semantico(tokens):
+        errores = []
+        tabla = {}
+        i = 0
+
+        while i < len(tokens):
+            tipo, valor, linea = tokens[i]
+
+            if tipo == "TIPO_DATO":
+                nombre = tokens[i+1][1]
+                tabla[nombre] = valor
+
+                i += 3
+                while i < len(tokens) and tokens[i][1] != ";":
+                    if tokens[i][0] == "IDENTIFICADOR":
+                        if tokens[i][1] not in tabla:
+                            errores.append(f"Variable '{tokens[i][1]}' no declarada (línea {tokens[i][2]})")
+                    i += 1
+
+            i += 1
+
+        return errores
+
+    # ==========================
+    # AST
+    # ==========================
+    @staticmethod
+    def construir_ast(tokens):
+        ast = []
+        i = 0
+
+        while i < len(tokens):
+            if tokens[i][0] == "TIPO_DATO":
+
+                nodo = {
+                    "tipo": "DECLARACION",
+                    "dato": tokens[i][1],
+                    "id": tokens[i+1][1],
+                    "expresion": [],
+                    "linea": tokens[i][2]
+                }
+
+                i += 3
+
+                while i < len(tokens) and tokens[i][1] != ";":
+                    nodo["expresion"].append(tokens[i][1])
+                    i += 1
+
+                ast.append(nodo)
+
+            i += 1
+
+        return ast
+
+    @staticmethod
+    def mostrar_ast(ast):
+        salida = ["🌳 ÁRBOL SINTÁCTICO:\n"]
+
+        for n in ast:
+            salida.append(f"└── {n['tipo']}")
+            salida.append(f"    ├── Tipo: {n['dato']}")
+            salida.append(f"    ├── ID: {n['id']}")
+            salida.append(f"    └── Expr: {' '.join(n['expresion'])}\n")
+
+        return "\n".join(salida)
+
+    # ==========================
+    # TABLA
+    # ==========================
+    @staticmethod
+    def construir_tabla(tokens):
+        tabla = {}
+        i = 0
+
+        while i < len(tokens):
+            if tokens[i][0] == "TIPO_DATO":
+                nombre = tokens[i+1][1]
+                expr = []
+
+                i += 3
+                while i < len(tokens) and tokens[i][1] != ";":
+                    expr.append(tokens[i][1])
+                    i += 1
+
+                tabla[nombre] = {
+                    "tipo": tokens[i- len(expr)-3][1],
+                    "expr": expr
+                }
+
+            i += 1
+
+        return tabla
+
+    @staticmethod
+    def mostrar_tabla(tabla):
+        salida = ["🧠 TABLA DE SÍMBOLOS:\n"]
+
+        for k, v in tabla.items():
+            salida.append(f"{k} -> Tipo: {v['tipo']} | Expr: {' '.join(v['expr'])}")
+
+        return "\n".join(salida)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -223,28 +360,28 @@ class CompiladorApp(tk.Tk):
 
         # Botones personalizados
         self.style.configure("Abrir.TButton",
-                             font=FONT_BOTON, padding=(14, 8),
-                             background=COLOR_ACENTO, foreground="#000")
+                            font=FONT_BOTON, padding=(14, 8),
+                            background=COLOR_ACENTO, foreground="#000")
         self.style.map("Abrir.TButton",
-                       background=[("active", COLOR_ACENTO_HOVER)])
+                    background=[("active", COLOR_ACENTO_HOVER)])
 
         self.style.configure("Guardar.TButton",
-                             font=FONT_BOTON, padding=(14, 8),
-                             background=COLOR_NARANJA, foreground="#000")
+                            font=FONT_BOTON, padding=(14, 8),
+                            background=COLOR_NARANJA, foreground="#000")
         self.style.map("Guardar.TButton",
-                       background=[("active", COLOR_NARANJA_HOVER)])
+                    background=[("active", COLOR_NARANJA_HOVER)])
 
         self.style.configure("Compilar.TButton",
-                             font=FONT_BOTON, padding=(14, 8),
-                             background=COLOR_VERDE, foreground="#000")
+                            font=FONT_BOTON, padding=(14, 8),
+                            background=COLOR_VERDE, foreground="#000")
         self.style.map("Compilar.TButton",
-                       background=[("active", COLOR_VERDE_HOVER)])
+                    background=[("active", COLOR_VERDE_HOVER)])
 
         self.style.configure("Cerrar.TButton",
-                             font=("Segoe UI", 9), padding=(10, 6),
-                             background="#e74c3c", foreground="white")
+                            font=("Segoe UI", 9), padding=(10, 6),
+                            background="#e74c3c", foreground="white")
         self.style.map("Cerrar.TButton",
-                       background=[("active", "#ff6b6b")])
+                    background=[("active", "#ff6b6b")])
 
     def _crear_interfaz(self):
         # Barra superior
@@ -510,27 +647,44 @@ class CompiladorApp(tk.Tk):
 
         # Asegurar que el contenido en disco sea el mismo que en el editor
         try:
-            with open(self.ruta_actual, "w", encoding="utf-8") as archivo:
-                archivo.write(self.text_area.get("1.0", tk.END))
-        except Exception as e:
-            self.escribir_terminal(f"⚠ No se pudo auto-guardar cambios recientes: {e}", "warning")
-
-        # Compilar
-        self.escribir_terminal(f"🔵 Compilando {self.archivo_actual}...", "titulo")
-        self.escribir_terminal("─" * 50)
-
-        try:
             tokens = CompiladorLogic.compilar_y_ejecutar(self.ruta_actual)
 
-            for tipo, valor, linea in tokens:
-                self.escribir_terminal(f"   [{tipo}] -> '{valor}' (ln {linea})")
+            # LÉXICO
+            for t in tokens:
+                self.escribir_terminal(f"{t}")
 
-            self.escribir_terminal("─" * 50)
-            self.escribir_terminal(f"✔ Léxico finalizado. {len(tokens)} tokens encontrados.\n", "exito")
+            # SINTÁCTICO
+            err_sin = CompiladorLogic.analisis_sintactico(tokens)
+            if err_sin:
+                for e in err_sin:
+                    self.escribir_terminal(e, "error")
+                return
+            else:
+                self.escribir_terminal("✔ Sintáctico correcto", "exito")
+
+            # SEMÁNTICO
+            err_sem = CompiladorLogic.analisis_semantico(tokens)
+            if err_sem:
+                for e in err_sem:
+                    self.escribir_terminal(e, "error")
+                return
+            else:
+                self.escribir_terminal("✔ Semántico correcto", "exito")
+
+            # AST
+            ast = CompiladorLogic.construir_ast(tokens)
+            for l in CompiladorLogic.mostrar_ast(ast).split("\n"):
+                self.escribir_terminal(l, "info")
+
+            # TABLA
+            tabla = CompiladorLogic.construir_tabla(tokens)
+            for l in CompiladorLogic.mostrar_tabla(tabla).split("\n"):
+                self.escribir_terminal(l, "info")
+
+            self.escribir_terminal("🚀 Compilación exitosa", "exito")
 
         except Exception as e:
-            self.escribir_terminal(f"❌ Error durante la compilación: {e}", "error")
-
+            self.escribir_terminal(str(e), "error")
 
 if __name__ == "__main__":
     app = CompiladorApp()
