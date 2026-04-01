@@ -443,3 +443,182 @@ class CompiladorLogic:
     # ║          >>> FIN MIEMBRO 8 <<<                                   ║
     # ╚══════════════════════════════════════════════════════════════════╝
 
+# ╔══════════════════════════════════════════════════════════════════╗
+    # ║          >>> INICIO MIEMBRO 9 <<<  (Líneas 1087 – 1254)         ║
+    # ║  Sección: Métodos de la app: sincronización de scroll,          ║
+    # ║           terminal, cerrar/abrir/guardar archivo,               ║
+    # ║           compilar + punto de entrada __main__                  ║
+    # ╚══════════════════════════════════════════════════════════════════╝
+
+    def _sync_scroll_editor(self, *args):
+        """Sincroniza scroll del editor con números de línea."""
+        self.num_linea.actualizar()
+        return args
+
+    def _on_editor_scroll(self, *args):
+        self.text_area.yview(*args)
+        self.num_linea.actualizar()
+
+    def escribir_terminal(self, mensaje, tag=None):
+        if tag:
+            self.terminal.insert(tk.END, mensaje + "\n", tag)
+        else:
+            self.terminal.insert(tk.END, mensaje + "\n")
+        self.terminal.see(tk.END)
+
+    def cerrar_archivo(self):
+        self.text_area.delete("1.0", tk.END)
+        self.terminal.delete("1.0", tk.END)
+        self.archivo_actual = "Ninguno"
+        self.ruta_actual = None
+        self.lbl_archivo.config(text=self.archivo_actual)
+        self.escribir_terminal("📋 Archivo cerrado.", "info")
+        self.num_linea.actualizar()
+
+    def abrir_archivo(self):
+        ruta = filedialog.askopenfilename(
+            title="Abrir archivo",
+            filetypes=[("Archivos CHU", "*.chu"), ("Todos", "*.*")]
+        )
+
+        if ruta:
+            try:
+                with open(ruta, "r", encoding="utf-8") as archivo:
+                    contenido = archivo.read()
+
+                self.text_area.delete("1.0", tk.END)
+                self.text_area.insert(tk.END, contenido)
+                self.ruta_actual = ruta
+                self.archivo_actual = os.path.basename(ruta)
+                self.lbl_archivo.config(text=self.archivo_actual)
+                self.escribir_terminal(f"📂 Archivo abierto: {ruta}", "info")
+                self.num_linea.actualizar()
+            except Exception as e:
+                messagebox.showerror("Error", f"No se pudo abrir el archivo:\n{e}")
+
+    def guardar_archivo(self):
+        if self.ruta_actual:
+            ruta = self.ruta_actual
+        else:
+            ruta = filedialog.asksaveasfilename(
+                title="Guardar archivo",
+                defaultextension=".chu",
+                filetypes=[("Archivos CHU", "*.chu")]
+            )
+
+        if ruta:
+            try:
+                with open(ruta, "w", encoding="utf-8") as archivo:
+                    archivo.write(self.text_area.get("1.0", tk.END))
+
+                self.ruta_actual = ruta
+                self.archivo_actual = os.path.basename(ruta)
+                self.lbl_archivo.config(text=self.archivo_actual)
+                self.escribir_terminal(f"💾 Archivo guardado: {ruta}", "exito")
+            except Exception as e:
+                messagebox.showerror("Error", f"No se pudo guardar el archivo:\n{e}")
+
+    def compilar(self):
+        self.terminal.delete("1.0", tk.END)
+
+        # Guardar antes de compilar
+        if not self.ruta_actual:
+            respuesta = messagebox.askyesno(
+                "Guardar",
+                "Para compilar, primero debes guardar el archivo. ¿Deseas guardarlo ahora?"
+            )
+            if respuesta:
+                self.guardar_archivo()
+            else:
+                self.escribir_terminal("⚠ Compilación cancelada: El archivo debe guardarse primero.", "warning")
+                return
+
+        # Si aún después de intentar guardar no hay ruta, salimos
+        if not self.ruta_actual:
+            return
+
+        try:
+            tokens = CompiladorLogic.compilar_y_ejecutar(self.ruta_actual)
+
+            # LÉXICO
+            self.escribir_terminal(" ANÁLISIS LÉXICO:", "titulo")
+            for t in tokens:
+                tipo, valor, linea = t
+                self.escribir_terminal(f"  [{linea}] {tipo:20s} → {valor}", "info")
+
+            self.escribir_terminal("", None)
+
+            # SINTÁCTICO
+            self.escribir_terminal("📐 ANÁLISIS SINTÁCTICO:", "titulo")
+            err_sin = CompiladorLogic.analisis_sintactico(tokens)
+            if err_sin:
+                for e in err_sin:
+                    self.escribir_terminal(f"  ✖ {e}", "error")
+                self.escribir_terminal("\n Compilación fallida en fase sintáctica.", "error")
+                return
+            else:
+                self.escribir_terminal("   Sin errores sintácticos.", "exito")
+
+            self.escribir_terminal("", None)
+
+            # SEMÁNTICO
+            self.escribir_terminal(" ANÁLISIS SEMÁNTICO:", "titulo")
+            err_sem = CompiladorLogic.analisis_semantico(tokens)
+            if err_sem:
+                for e in err_sem:
+                    self.escribir_terminal(f"  ✖ {e}", "error")
+                self.escribir_terminal("\n Compilación fallida en fase semántica.", "error")
+                return
+            else:
+                self.escribir_terminal("  ✔ Sin errores semánticos.", "exito")
+
+            self.escribir_terminal("", None)
+
+            # AST
+            ast = CompiladorLogic.construir_ast(tokens)
+            for l in CompiladorLogic.mostrar_ast(ast).split("\n"):
+                self.escribir_terminal(l, "info")
+
+            self.escribir_terminal("", None)
+
+            # TABLA DE SÍMBOLOS
+            tabla = CompiladorLogic.construir_tabla(tokens)
+            for l in CompiladorLogic.mostrar_tabla(tabla).split("\n"):
+                self.escribir_terminal(l, "info")
+
+            self.escribir_terminal("", None)
+
+            # CÓDIGO INTERMEDIO
+            cuadruplos = CompiladorLogic.generar_cuadruplos(tokens)
+            for l in CompiladorLogic.mostrar_cuadruplos(cuadruplos).split("\n"):
+                self.escribir_terminal(l, "info")
+
+            self.escribir_terminal("", None)
+
+            # EJECUCIÓN / INTÉRPRETE
+            self.escribir_terminal("▶  RESULTADO DE EJECUCIÓN:", "titulo")
+            salida_ejecucion = []
+            CompiladorLogic.interpretar(
+                cuadruplos,
+                output_fn=lambda msg: salida_ejecucion.append(msg)
+            )
+            if salida_ejecucion:
+                for linea_out in salida_ejecucion:
+                    self.escribir_terminal(f"  {linea_out}", "exito")
+            else:
+                self.escribir_terminal("  (sin salida en pantalla)", "warning")
+
+            self.escribir_terminal("", None)
+            self.escribir_terminal(" Compilación y ejecución exitosa.", "exito")
+
+        except Exception as e:
+            self.escribir_terminal(f"  ✖ Error interno: {e}", "error")
+
+if __name__ == "__main__":
+    app = CompiladorApp()
+    app.mainloop()
+
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║          >>> FIN MIEMBRO 9 <<<                                   ║
+# ╚══════════════════════════════════════════════════════════════════╝
+
