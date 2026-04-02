@@ -58,6 +58,171 @@ FONT_NUMLINEA = ("Cascadia Code", 11)
 # ║          >>> FIN MIEMBRO 1 <<<                                   ║
 # ╚══════════════════════════════════════════════════════════════════╝
 
+#     ╔══════════════════════════════════════════════════════════════════╗
+    # ║          >>> INICIO MIEMBRO 3 <<<  (Líneas 139 – 295)            ║
+    # ║  Sección: _procesar_palabra + análisis sintáctico completo       ║
+    # ║              Raul                                                ║
+    # ╚══════════════════════════════════════════════════════════════════╝
+
+    @staticmethod
+    def _procesar_palabra(palabra, linea, tokens, ultimo_tipo=None):
+        # Si el token anterior fue 'definir', esta palabra es nombre de función
+        es_nombre_funcion = (
+            ultimo_tipo == "PALABRA_RESERVADA"
+            and tokens
+            and tokens[-1][1] == "definir"
+        )
+        if es_nombre_funcion:
+            tokens.append(("IDENTIFICADOR", palabra, linea))
+        elif palabra in PALABRAS_RESERVADAS:
+            tokens.append(("PALABRA_RESERVADA", palabra, linea))
+        elif palabra in TIPOS_DATO:
+            tokens.append(("TIPO_DATO", palabra, linea))
+        elif palabra in FUNCIONES_INTEGRADAS:
+            tokens.append(("FUNCION_INTEGRADA", palabra, linea))
+        elif palabra.replace('.', '', 1).isdigit():
+            tokens.append(("NUMERO", palabra, linea))
+        elif palabra in OPERADORES_PALABRA:
+            tokens.append(("OPERADOR", palabra, linea))
+        else:
+            tokens.append(("IDENTIFICADOR", palabra, linea))
+
+    # SINTÁCTICO
+
+    @staticmethod
+    def analisis_sintactico(tokens):
+        errores = []
+        i = 0
+        pila_par = []   # pila de paréntesis
+        pila_llave = [] # pila de llaves
+
+        while i < len(tokens):
+            tipo, valor, linea = tokens[i]
+
+            # ── Paréntesis ──
+            if valor == "(":
+                pila_par.append(linea)
+            elif valor == ")":
+                if not pila_par:
+                    errores.append(f"')' sin abrir en línea {linea}")
+                else:
+                    pila_par.pop()
+
+            # ── Llaves ──
+            if valor == "{":
+                pila_llave.append(linea)
+            elif valor == "}":
+                if not pila_llave:
+                    errores.append(f"'}}' sin abrir en línea {linea}")
+                else:
+                    pila_llave.pop()
+
+            # ── Declaración de variable: TIPO_DATO ID == expr . ──
+            # Solo aplica fuera de listas de parámetros (no dentro de definir(...))
+            if tipo == "TIPO_DATO":
+                # Detectar si estamos dentro de una lista de parámetros de 'definir'
+                en_params = False
+                for k in range(i - 1, -1, -1):
+                    v = tokens[k][1]
+                    if v == "(":
+                        # Ver si antes del ( hay un IDENTIFICADOR seguido de 'definir'
+                        if k >= 2 and tokens[k-1][0] == "IDENTIFICADOR" and tokens[k-2][1] == "definir":
+                            en_params = True
+                        break
+                    if v in (")", "{", "}", "."):
+                        break
+
+                if not en_params:
+                    if i + 3 >= len(tokens):
+                        errores.append(f"Declaración incompleta en línea {linea}")
+                    else:
+                        if tokens[i+1][0] != "IDENTIFICADOR":
+                            errores.append(f"Falta identificador después de tipo en línea {linea}")
+                        elif tokens[i+2][1] != "==":
+                            errores.append(f"Se esperaba '==' en línea {linea}, se encontró '{tokens[i+2][1]}'")
+                        else:
+                            j = i + 3
+                            termina = False
+                            while j < len(tokens):
+                                if tokens[j][1] == ".":
+                                    termina = True
+                                    break
+                                if tokens[j][1] in ("{", "}"):
+                                    break
+                                j += 1
+                            if not termina:
+                                errores.append(f"Falta '.' al final de la declaración en línea {linea}")
+
+            # ── Función: definir nombre ( params ) { ──
+            if valor == "definir":
+                if i + 1 >= len(tokens):
+                    errores.append(f"'definir' sin nombre de función en línea {linea}")
+                elif tokens[i+1][0] != "IDENTIFICADOR":
+                    errores.append(f"Se esperaba nombre de función después de 'definir' en línea {linea}")
+                else:
+                    nombre_fn = tokens[i+1][1]
+                    if i + 2 >= len(tokens) or tokens[i+2][1] != "(":
+                        errores.append(f"Falta '(' después del nombre '{nombre_fn}' en línea {linea}")
+                    else:
+                        # Buscar cierre de paréntesis y luego '{'
+                        j = i + 3
+                        while j < len(tokens) and tokens[j][1] != ")":
+                            j += 1
+                        if j >= len(tokens):
+                            errores.append(f"Falta ')' en definición de '{nombre_fn}' en línea {linea}")
+                        elif j + 1 >= len(tokens) or tokens[j+1][1] != "{":
+                            errores.append(f"Falta '{{' después de parámetros en función '{nombre_fn}' en línea {linea}")
+
+            # ── Ciclo mientras: mientras ( condicion ) { ──
+            if valor == "mientras":
+                if i + 1 >= len(tokens) or tokens[i+1][1] != "(":
+                    errores.append(f"Se esperaba '(' después de 'mientras' en línea {linea}")
+                else:
+                    j = i + 2
+                    while j < len(tokens) and tokens[j][1] != ")":
+                        j += 1
+                    if j >= len(tokens):
+                        errores.append(f"Falta ')' en condición de 'mientras' en línea {linea}")
+                    elif j + 1 >= len(tokens) or tokens[j+1][1] != "{":
+                        errores.append(f"Falta '{{' después de condición 'mientras' en línea {linea}")
+
+            # ── Ciclo para: para ( expr ) { ──
+            if valor == "para":
+                if i + 1 >= len(tokens) or tokens[i+1][1] != "(":
+                    errores.append(f"Se esperaba '(' después de 'para' en línea {linea}")
+                else:
+                    j = i + 2
+                    while j < len(tokens) and tokens[j][1] != ")":
+                        j += 1
+                    if j >= len(tokens):
+                        errores.append(f"Falta ')' en condición de 'para' en línea {linea}")
+                    elif j + 1 >= len(tokens) or tokens[j+1][1] != "{":
+                        errores.append(f"Falta '{{' después de condición 'para' en línea {linea}")
+
+            # ── regresar expr . ──
+            if valor == "regresar":
+                j = i + 1
+                termina = False
+                while j < len(tokens) and tokens[j][1] not in ("}", "{"):
+                    if tokens[j][1] == ".":
+                        termina = True
+                        break
+                    j += 1
+                if not termina:
+                    errores.append(f"Falta '.' después de 'regresar' en línea {linea}")
+
+            i += 1
+
+        if pila_par:
+            errores.append(f"Paréntesis sin cerrar (abierto en línea {pila_par[-1]})")
+        if pila_llave:
+            errores.append(f"Llave sin cerrar (abierta en línea {pila_llave[-1]})")
+
+        return errores
+
+    # ╔══════════════════════════════════════════════════════════════════╗
+    # ║          >>> FIN MIEMBRO 3 <<<                                   ║
+    # ╚══════════════════════════════════════════════════════════════════╝
 # ╔══════════════════════════════════════════════════════════════════╗
     # ║          >>> INICIO MIEMBRO 4 <<<  (Líneas 296 – 484)           ║
     # ║  Sección: Análisis semántico + construcción y                   ║
