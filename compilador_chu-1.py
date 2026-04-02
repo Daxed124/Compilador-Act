@@ -59,6 +59,205 @@ FONT_NUMLINEA = ("Cascadia Code", 11)
 # ╚══════════════════════════════════════════════════════════════════╝
 
 # ╔══════════════════════════════════════════════════════════════════╗
+    # ║          >>> INICIO MIEMBRO 4 <<<  (Líneas 296 – 484)           ║
+    # ║  Sección: Análisis semántico + construcción y                   ║
+    # ║           visualización del AST                                 ║
+    # ╚══════════════════════════════════════════════════════════════════╝
+
+    # SEMÁNTICO
+
+    @staticmethod
+    def analisis_semantico(tokens):
+        errores = []
+        pila_ambitos = [{}]
+        funciones = {}
+        params_pendientes = {}  # params de función esperando al { siguiente
+        i = 0
+
+        def declarada(nombre):
+            for ambito in reversed(pila_ambitos):
+                if nombre in ambito:
+                    return True
+            return False
+
+        while i < len(tokens):
+            tipo, valor, linea = tokens[i]
+
+            # Apertura de bloque → nuevo ámbito (con parámetros pendientes si los hay)
+            if valor == "{":
+                nuevo = dict(params_pendientes)
+                params_pendientes.clear()
+                pila_ambitos.append(nuevo)
+
+            # Cierre de bloque → destruir ámbito
+            elif valor == "}":
+                if len(pila_ambitos) > 1:
+                    pila_ambitos.pop()
+
+            # Registro de función + parámetros como variables del ámbito
+            elif valor == "definir":
+                if i + 1 < len(tokens) and tokens[i+1][0] == "IDENTIFICADOR":
+                    nombre_fn = tokens[i+1][1]
+                    funciones[nombre_fn] = linea
+                    # Registrar parámetros: buscar entre ( y )
+                    j = i + 2
+                    while j < len(tokens) and tokens[j][1] != "(":
+                        j += 1
+                    j += 1  # saltar (
+                    while j < len(tokens) and tokens[j][1] != ")":
+                        if tokens[j][0] == "TIPO_DATO" and j + 1 < len(tokens):
+                            param_nombre = tokens[j+1][1]
+                            # Se registra en el ámbito actual (el bloque { vendrá después)
+                            pila_ambitos[-1][param_nombre] = tokens[j][1]
+                        j += 1
+
+            # Declaración de variable: TIPO_DATO ID == expr .
+            elif tipo == "TIPO_DATO":
+                if i + 1 < len(tokens):
+                    nombre_var = tokens[i+1][1]
+                    pila_ambitos[-1][nombre_var] = valor
+                    i += 3
+                    while i < len(tokens) and tokens[i][1] != ".":
+                        if tokens[i][0] == "IDENTIFICADOR":
+                            if not declarada(tokens[i][1]) and tokens[i][1] not in funciones:
+                                errores.append(f"Variable '{tokens[i][1]}' no declarada (línea {tokens[i][2]})")
+                        # CADENA es siempre válida como valor literal
+                        i += 1
+
+            # Asignación simple: ID == expr .  (dentro de ciclos/funciones)
+            elif tipo == "IDENTIFICADOR":
+                if i + 1 < len(tokens) and tokens[i+1][1] == "==":
+                    if not declarada(valor):
+                        errores.append(f"Variable '{valor}' no declarada en asignación (línea {linea})")
+                    i += 2
+                    while i < len(tokens) and tokens[i][1] != ".":
+                        if tokens[i][0] == "IDENTIFICADOR":
+                            if not declarada(tokens[i][1]) and tokens[i][1] not in funciones:
+                                errores.append(f"Variable '{tokens[i][1]}' no declarada (línea {tokens[i][2]})")
+                        i += 1
+
+            i += 1
+
+        return errores
+
+    # AST
+
+    @staticmethod
+    def construir_ast(tokens):
+        ast = []
+        i = 0
+
+        while i < len(tokens):
+            tipo, valor, linea = tokens[i]
+
+            # ── Declaración de variable ──
+            if tipo == "TIPO_DATO":
+                nodo = {
+                    "tipo": "DECLARACION",
+                    "dato": valor,
+                    "id": tokens[i+1][1] if i+1 < len(tokens) else "?",
+                    "expresion": [],
+                    "linea": linea
+                }
+                i += 3
+                while i < len(tokens) and tokens[i][1] != ".":
+                    nodo["expresion"].append(tokens[i][1])
+                    i += 1
+                ast.append(nodo)
+
+            # ── Función ──
+            elif valor == "definir":
+                nombre_fn = tokens[i+1][1] if i+1 < len(tokens) else "?"
+                params = []
+                j = i + 3
+                while j < len(tokens) and tokens[j][1] != ")":
+                    if tokens[j][0] in ("IDENTIFICADOR", "TIPO_DATO"):
+                        params.append(tokens[j][1])
+                    j += 1
+                nodo = {
+                    "tipo": "FUNCION",
+                    "nombre": nombre_fn,
+                    "params": params,
+                    "linea": linea
+                }
+                ast.append(nodo)
+                i = j
+
+            # ── Ciclo mientras ──
+            elif valor == "mientras":
+                condicion = []
+                j = i + 2
+                while j < len(tokens) and tokens[j][1] != ")":
+                    condicion.append(tokens[j][1])
+                    j += 1
+                nodo = {
+                    "tipo": "MIENTRAS",
+                    "condicion": condicion,
+                    "linea": linea
+                }
+                ast.append(nodo)
+                i = j
+
+            # ── Ciclo para ──
+            elif valor == "para":
+                condicion = []
+                j = i + 2
+                while j < len(tokens) and tokens[j][1] != ")":
+                    condicion.append(tokens[j][1])
+                    j += 1
+                nodo = {
+                    "tipo": "PARA",
+                    "condicion": condicion,
+                    "linea": linea
+                }
+                ast.append(nodo)
+                i = j
+
+            # ── regresar ──
+            elif valor == "regresar":
+                expr = []
+                j = i + 1
+                while j < len(tokens) and tokens[j][1] != ".":
+                    expr.append(tokens[j][1])
+                    j += 1
+                nodo = {
+                    "tipo": "REGRESAR",
+                    "expresion": expr,
+                    "linea": linea
+                }
+                ast.append(nodo)
+                i = j
+
+            i += 1
+
+        return ast
+
+    @staticmethod
+    def mostrar_ast(ast):
+        salida = ["🌳 ÁRBOL SINTÁCTICO:\n"]
+
+        for n in ast:
+            t = n["tipo"]
+            salida.append(f"└── {t}  (línea {n['linea']})")
+            if t == "DECLARACION":
+                salida.append(f"    ├── Tipo : {n['dato']}")
+                salida.append(f"    ├── ID   : {n['id']}")
+                salida.append(f"    └── Expr : {' '.join(n['expresion'])}\n")
+            elif t == "FUNCION":
+                salida.append(f"    ├── Nombre  : {n['nombre']}")
+                salida.append(f"    └── Params  : {', '.join(n['params']) or 'ninguno'}\n")
+            elif t in ("MIENTRAS", "PARA"):
+                salida.append(f"    └── Condición: {' '.join(n['condicion'])}\n")
+            elif t == "REGRESAR":
+                salida.append(f"    └── Expr: {' '.join(n['expresion'])}\n")
+
+        return "\n".join(salida)
+
+    # ╔══════════════════════════════════════════════════════════════════╗
+    # ║          >>> FIN MIEMBRO 4 <<<                                   ║
+    # ╚══════════════════════════════════════════════════════════════════╝
+
+# ╔══════════════════════════════════════════════════════════════════╗
     # ║          >>> INICIO MIEMBRO 5 <<<  (Líneas 485 – 700)           ║
     # ║  Sección: Tabla de símbolos + generación de cuádruplos          ║
     # ║           (código intermedio) + mostrar_cuadruplos              ║
