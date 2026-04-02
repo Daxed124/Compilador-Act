@@ -1,11 +1,11 @@
-entero x = 5.
-entero y = 10.
+entero num1 = 5.
+entero num2 = 10.
 flota z = 3.14.
 tecto nombre = "Hola mundo".
-si x == y tons.
+si num1 == num2 tons.
     afuera("Son iguales").
 tonses.
     afuera("No son iguales").
 .
-entero resultado = x suma y.
+entero resultado = num1 suma num2.
 afuera(resultado).
