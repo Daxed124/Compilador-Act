@@ -774,7 +774,109 @@ FONT_NUMLINEA = ("Cascadia Code", 11)
     # ║          >>> FIN MIEMBRO 6 <<<                                   ║
     # ╚══════════════════════════════════════════════════════════════════╝
 
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║          >>> INICIO MIEMBRO 7 <<<  (Líneas 817 – 912)           ║
+# ║  Sección: Widget NumeroLinea + clase CompiladorApp              ║
+# ║           (_configurar_ventana, _inicializar_variables,         ║
+# ║            _configurar_estilos)                                 ║
+# ╚══════════════════════════════════════════════════════════════════╝
 
+# WIDGET: Números de línea para el editor
+
+class NumeroLinea(tk.Canvas):
+    """Canvas que muestra los números de línea junto al editor."""
+
+    def __init__(self, master, text_widget, **kwargs):
+        super().__init__(master, **kwargs)
+        self.text_widget = text_widget
+        self.text_widget.bind("<<Modified>>", self._on_modify)
+        self.text_widget.bind("<Configure>", self._on_modify)
+        self.text_widget.bind("<KeyRelease>", self._on_modify)
+        self.text_widget.bind("<MouseWheel>", self._on_scroll)
+
+    def _on_scroll(self, event=None):
+        self.after(5, self.actualizar)
+
+    def _on_modify(self, event=None):
+        self.after_idle(self.actualizar)
+
+    def actualizar(self):
+        self.delete("all")
+        i = self.text_widget.index("@0,0")
+        while True:
+            dline = self.text_widget.dlineinfo(i)
+            if dline is None:
+                break
+            y = dline[1]
+            num = str(i).split(".")[0]
+            self.create_text(
+                self.winfo_width() - 8, y,
+                anchor="ne", text=num,
+                fill=COLOR_NUM_LINEA_FG,
+                font=FONT_NUMLINEA
+            )
+            i = self.text_widget.index(f"{i}+1line")
+            if int(i.split(".")[0]) > int(self.text_widget.index("end").split(".")[0]):
+                break
+
+# INTERFAZ GRÁFICA
+
+class CompiladorApp(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self._configurar_ventana()
+        self._inicializar_variables()
+        self._configurar_estilos()
+        self._crear_interfaz()
+
+    def _configurar_ventana(self):
+        self.title("⚡ Compilador: Cuchurrumin FC")
+        self.state("zoomed")
+        self.minsize(1000, 600)
+        self.configure(bg=COLOR_FONDO)
+
+    def _inicializar_variables(self):
+        self.archivo_actual = "Ninguno"
+        self.ruta_actual = None
+
+    def _configurar_estilos(self):
+        self.style = ttk.Style(self)
+        self.style.theme_use("clam")
+
+        # Estilo general
+        self.style.configure(".", background=COLOR_FONDO, foreground=COLOR_TEXTO_CLARO)
+        self.style.configure("TFrame", background=COLOR_FONDO)
+        self.style.configure("TLabel", background=COLOR_FONDO, foreground=COLOR_TEXTO_CLARO)
+        self.style.configure("TPanedwindow", background=COLOR_FONDO)
+
+        # Botones personalizados
+        self.style.configure("Abrir.TButton",
+                            font=FONT_BOTON, padding=(14, 8),
+                            background=COLOR_ACENTO, foreground="#000")
+        self.style.map("Abrir.TButton",
+                    background=[("active", COLOR_ACENTO_HOVER)])
+
+        self.style.configure("Guardar.TButton",
+                            font=FONT_BOTON, padding=(14, 8),
+                            background=COLOR_NARANJA, foreground="#000")
+        self.style.map("Guardar.TButton",
+                    background=[("active", COLOR_NARANJA_HOVER)])
+
+        self.style.configure("Compilar.TButton",
+                            font=FONT_BOTON, padding=(14, 8),
+                            background=COLOR_VERDE, foreground="#000")
+        self.style.map("Compilar.TButton",
+                    background=[("active", COLOR_VERDE_HOVER)])
+
+        self.style.configure("Cerrar.TButton",
+                            font=("Segoe UI", 9), padding=(10, 6),
+                            background="#e74c3c", foreground="white")
+        self.style.map("Cerrar.TButton",
+                    background=[("active", "#ff6b6b")])
+
+    # ╔══════════════════════════════════════════════════════════════════╗
+    # ║          >>> FIN MIEMBRO 7 <<<                                   ║
+    # ╚══════════════════════════════════════════════════════════════════╝
 
 # ╔══════════════════════════════════════════════════════════════════╗
     # ║          >>> INICIO MIEMBRO 9 <<<  (Líneas 1087 – 1254)         ║
