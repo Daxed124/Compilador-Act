@@ -1,7 +1,7 @@
 # ╔══════════════════════════════════════════════════════════════════╗
-# ║          >>> INICIO MIEMBRO 1 <<<  (Líneas 1 – 51)              ║
-# ║  Sección: Imports, palabras reservadas, tipos de dato,          ║
-# ║           operadores, símbolos y constantes de diseño           ║
+# ║          >>> INICIO MIEMBRO 1 <<<  (Líneas 1 – 51)               ║
+# ║  Sección: Imports, palabras reservadas, tipos de dato,           ║
+# ║           operadores, símbolos y constantes de diseño            ║
 # ╚══════════════════════════════════════════════════════════════════╝
 
 import tkinter as tk
@@ -57,11 +57,11 @@ FONT_NUMLINEA = ("Cascadia Code", 11)
 # ╔══════════════════════════════════════════════════════════════════╗
 # ║          >>> FIN MIEMBRO 1 <<<                                   ║
 # ╚══════════════════════════════════════════════════════════════════╝
- #    ╔═══════════════════════════════════════════════════════════════╗
-    # ║          >>> INICIO MIEMBRO 2 <<<  (Líneas 52 – 130)          ║
-    # ║                Jonathan Mizraim Olvera Diaz                   ║
-    # ║                                                               ║
-    # ╚═══════════════════════════════════════════════════════════════╝
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║          >>> INICIO MIEMBRO 2 <<<  (Líneas 52 – 130)             ║
+# ║                Jonathan Mizraim Olvera Diaz                      ║
+# ║                                                                  ║
+# ╚══════════════════════════════════════════════════════════════════╝
 # LÓGICA DEL COMPILADOR
 
 class CompiladorLogic:
@@ -154,7 +154,7 @@ class CompiladorLogic:
     # ║          >>> FIN MIEMBRO 2 <<<                                   ║
     # ╚══════════════════════════════════════════════════════════════════╝
 
-#     ╔══════════════════════════════════════════════════════════════════╗
+    # ╔══════════════════════════════════════════════════════════════════╗
     # ║          >>> INICIO MIEMBRO 3 <<<  (Líneas 139 – 295)            ║
     # ║  Sección: _procesar_palabra + análisis sintáctico completo       ║
     # ║              Raul                                                ║
@@ -319,10 +319,10 @@ class CompiladorLogic:
     # ╔══════════════════════════════════════════════════════════════════╗
     # ║          >>> FIN MIEMBRO 3 <<<                                   ║
     # ╚══════════════════════════════════════════════════════════════════╝
-# ╔══════════════════════════════════════════════════════════════════╗
-    # ║          >>> INICIO MIEMBRO 4 <<<  (Líneas 296 – 484)           ║
-    # ║  Sección: Análisis semántico + construcción y                   ║
-    # ║           visualización del AST                                 ║
+    # ╔══════════════════════════════════════════════════════════════════╗
+    # ║           >>> INICIO MIEMBRO 4 <<<  (Líneas 296 – 484)           ║
+    # ║       Sección: Análisis semántico + construcción y               ║
+    # ║            visualización del AST                                 ║
     # ╚══════════════════════════════════════════════════════════════════╝
 
     # SEMÁNTICO
@@ -518,10 +518,10 @@ class CompiladorLogic:
     # ║          >>> FIN MIEMBRO 4 <<<                                   ║
     # ╚══════════════════════════════════════════════════════════════════╝
 
-# ╔══════════════════════════════════════════════════════════════════╗
-    # ║          >>> INICIO MIEMBRO 5 <<<  (Líneas 485 – 700)           ║
-    # ║  Sección: Tabla de símbolos + generación de cuádruplos          ║
-    # ║           (código intermedio) + mostrar_cuadruplos              ║
+    # ╔══════════════════════════════════════════════════════════════════╗
+    # ║          >>> INICIO MIEMBRO 5 <<<  (Líneas 485 – 700)            ║
+    # ║  Sección: Tabla de símbolos + generación de cuádruplos           ║
+    # ║           (código intermedio) + mostrar_cuadruplos               ║
     # ╚══════════════════════════════════════════════════════════════════╝
 
     # TABLA
@@ -743,9 +743,9 @@ class CompiladorLogic:
     # ║          >>> FIN MIEMBRO 5 <<<                                   ║
     # ╚══════════════════════════════════════════════════════════════════╝
 
-# ╔══════════════════════════════════════════════════════════════════╗
-    # ║          >>> INICIO MIEMBRO 6 <<<  (Líneas 701 – 816)           ║
-    # ║  Sección: Intérprete (ejecuta cuádruplos en memoria virtual)    ║
+    # ╔══════════════════════════════════════════════════════════════════╗
+    # ║           >>> INICIO MIEMBRO 6 <<<  (Líneas 701 – 816)           ║
+    # ║  Sección: Intérprete (ejecuta cuádruplos en memoria virtual)     ║
     # ╚══════════════════════════════════════════════════════════════════╝
 
     # INTÉRPRETE
@@ -973,11 +973,12 @@ class CompiladorApp(tk.Tk):
     # ╔══════════════════════════════════════════════════════════════════╗
     # ║          >>> FIN MIEMBRO 7 <<<                                   ║
     # ╚══════════════════════════════════════════════════════════════════╝
- #    ╔═══════════════════════════════════════════════════════════════╗
-    # ║          >>> INICIO MIEMBRO 8 <<<  (Líneas 913 – 1086)        ║
-    # ║                Jonathan Mizraim Olvera Diaz                   ║
-    # ║                                                               ║
-    # ╚═══════════════════════════════════════════════════════════════╝
+
+    # ╔══════════════════════════════════════════════════════════════════╗
+    # ║          >>> INICIO MIEMBRO 8 <<<  (Líneas 913 – 1086)           ║
+    # ║                Jonathan Mizraim Olvera Diaz                      ║
+    # ║                                                                  ║
+    # ╚══════════════════════════════════════════════════════════════════╝
     def _crear_interfaz(self):
         # Barra superior
         self._crear_barra_herramientas()
@@ -1156,12 +1157,13 @@ class CompiladorApp(tk.Tk):
     # ╔══════════════════════════════════════════════════════════════════╗
     # ║          >>> FIN MIEMBRO 8 <<<                                   ║
     # ╚══════════════════════════════════════════════════════════════════╝
+    
 
-# ╔══════════════════════════════════════════════════════════════════╗
-    # ║          >>> INICIO MIEMBRO 9 <<<  (Líneas 1087 – 1254)         ║
-    # ║  Sección: Métodos de la app: sincronización de scroll,          ║
-    # ║           terminal, cerrar/abrir/guardar archivo,               ║
-    # ║           compilar + punto de entrada __main__                  ║
+    # ╔══════════════════════════════════════════════════════════════════╗
+    # ║          >>> INICIO MIEMBRO 9 <<<  (Líneas 1087 – 1254)          ║
+    # ║  Sección: Métodos de la app: sincronización de scroll,           ║
+    # ║           terminal, cerrar/abrir/guardar archivo,                ║
+    # ║           compilar + punto de entrada __main__                   ║
     # ╚══════════════════════════════════════════════════════════════════╝
 
     def _sync_scroll_editor(self, *args):
